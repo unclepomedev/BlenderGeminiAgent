@@ -217,3 +217,5 @@ __marimo__/
 
 **/*.zip
 .DS_Store
+# TODO (temp)
+result_from_blender.png
