@@ -1,0 +1,22 @@
+schema_version = "1.0.0"
+id = "BlenderGeminiAgent"
+version = "1.0.0"
+name = "BlenderGeminiAgent"
+tagline = "Minimal example Blender add-on"
+type = "add-on"
+
+blender_version_min = "5.0.0"
+
+maintainer = "Your Name <you@example.com>"
+license = [
+    "SPDX:GPL-3.0-or-later",
+]
+
+[description]
+text = """
+Minimal hello world add-on template.
+Provides a sample operator, UI panel, and preferences.
+"""
+
+# more details (bundle 3rd party modules, permissions, etc.)
+# https://docs.blender.org/manual/en/4.2/advanced/extensions/getting_started.html#manifest
