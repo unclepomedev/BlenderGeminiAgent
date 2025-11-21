@@ -259,6 +259,7 @@ if prompt := st.chat_input("Ex: 'Clear the scene and create a red chair'"):
         response_placeholder = st.empty()
         current_response_text = ""
         turn_count = 0
+        response = None
 
         with st.status("Agent is working...", expanded=True) as status:
             try:
@@ -282,13 +283,14 @@ if prompt := st.chat_input("Ex: 'Clear the scene and create a red chair'"):
                 st.error(f"An error occurred: {e}")
                 status.update(label="Error", state="error")
 
-        final_text = "".join([part.text for part in response.parts if part.text])
-        st.markdown(final_text)
+        if response:
+            final_text = "".join([part.text for part in response.parts if part.text])
+            st.markdown(final_text)
 
-        msg_data = {"role": "assistant", "content": final_text}
+            msg_data = {"role": "assistant", "content": final_text}
 
-        if "temp_images" in st.session_state and st.session_state.temp_images:
-            msg_data["images"] = st.session_state.temp_images
-            del st.session_state.temp_images
+            if "temp_images" in st.session_state and st.session_state.temp_images:
+                msg_data["images"] = st.session_state.temp_images
+                del st.session_state.temp_images
 
-        st.session_state.messages.append(msg_data)
+            st.session_state.messages.append(msg_data)
