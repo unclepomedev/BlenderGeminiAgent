@@ -16,7 +16,6 @@ project_root/
 │   ├── blender_manifest.toml  # Extension definition
 │   └── __init__.py            # Server logic (HTTP Server + Context Overrides)
 │
-├── agent_client.py            # [prototype] ignore me
 └── app.py                     # [Client] Streamlit Web UI (The Brain)
 ```
 
@@ -70,6 +69,8 @@ pip install streamlit google-generativeai requests pillow
 ```
 
 ## 🎮 Usage
+
+![image](assets/the_img.png)
 
 1. Ensure Blender Server is Running: Make sure you have executed `Start Agent Server` inside Blender.
 2. Launch the Web UI: Run the following command in your terminal:
