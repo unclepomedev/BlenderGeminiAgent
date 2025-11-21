@@ -241,7 +241,7 @@ for msg in st.session_state.messages:
             st.markdown(msg["content"])
         if msg.get("images"):
             for img in msg["images"]:
-                st.image(img, caption="Viewport Capture", use_container_width=True)
+                st.image(img, caption="Viewport Capture", width="stretch")
         if msg.get("logs"):
             with st.expander("See Execution Logs"):
                 st.code(msg["logs"], language="text")
