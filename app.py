@@ -81,21 +81,21 @@ if "chat_session" not in st.session_state:
 
 
 def _make_function_response_part(name: str, response_dict: dict):
-    """Create a function_response Part for Gemini.
+    """Create a function_response part for Gemini.
 
     Args:
         name: Tool/function name to attach to the response.
         response_dict: JSON-serializable dictionary payload to return to the model.
 
     Returns:
-        A genai.protos.Part that wraps a FunctionResponse.
+        A dict content part for a function_response.
     """
-    return genai.protos.Part(
-        function_response=genai.protos.FunctionResponse(
-            name=name,
-            response=response_dict,
-        )
-    )
+    return {
+        "function_response": {
+            "name": name,
+            "response": response_dict,
+        }
+    }
 
 
 def handle_run_blender_script(fname: str, fargs: dict, *, chat_session):
@@ -125,7 +125,7 @@ def handle_run_blender_script(fname: str, fargs: dict, *, chat_session):
         st.success("Code Executed Successfully")
 
     part = _make_function_response_part(fname, api_response)
-    return chat_session.send_message(genai.protos.Content(parts=[part]))
+    return chat_session.send_message([part])
 
 
 def handle_get_viewport_screenshot(fname: str, *, chat_session, turn_count: int):
@@ -167,7 +167,7 @@ def handle_get_viewport_screenshot(fname: str, *, chat_session, turn_count: int)
     # Error path
     st.error(f"Vision Error: {result.get('message')}")
     error_part = _make_function_response_part(fname, {"error": result.get("message")})
-    return chat_session.send_message(genai.protos.Content(parts=[error_part]))
+    return chat_session.send_message([error_part])
 
 
 def process_one_turn(response, *, chat_session, turn_count: int):

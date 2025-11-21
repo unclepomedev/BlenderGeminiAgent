@@ -16,8 +16,8 @@ import bpy
 
 PORT = 8081
 execution_queue = queue.Queue()
-server_thread = None
-httpd = None
+server_thread: threading.Thread | None = None
+httpd: socketserver.TCPServer | None = None
 
 
 def get_view3d_context():
@@ -159,7 +159,7 @@ def start_server_thread():
     Handler = AgentRequestHandler
     socketserver.TCPServer.allow_reuse_address = True
     try:
-        httpd = socketserver.TCPServer(("", PORT), Handler)
+        httpd = socketserver.TCPServer(("", PORT), Handler)  # type: ignore[arg-type]
         print(f"Serving on port {PORT}")
         httpd.serve_forever()
     except OSError as e:
@@ -171,7 +171,7 @@ class OBJECT_OT_StartServer(bpy.types.Operator):
     bl_idname = "system.start_agent_server"
     bl_label = "Start Agent Server"
 
-    def execute(self, context):
+    def execute(self, _):
         global server_thread
         if server_thread and server_thread.is_alive(): return {'CANCELLED'}
         server_thread = threading.Thread(target=start_server_thread, daemon=True)
@@ -186,7 +186,7 @@ class OBJECT_OT_StopServer(bpy.types.Operator):
     bl_idname = "system.stop_agent_server"
     bl_label = "Stop Agent Server"
 
-    def execute(self, context):
+    def execute(self, _):
         global httpd
         if httpd:
             httpd.shutdown()
