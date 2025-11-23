@@ -1,67 +1,19 @@
 import base64
 import io
-import datetime
-import os
-
-import google.generativeai as genai
-import requests
 import streamlit as st
+import google.generativeai as genai
 from PIL import Image
 
-LOG_DIR = "logs"
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
+from client.config import SYSTEM_INSTRUCTION, DEFAULT_SERVER_URL
+from client.logger import log_blender_interaction, log_user_prompt, ensure_log_dir
+from client.blender_client import BlenderClient
 
-
-def log_blender_interaction(code: str, result: dict):
-    """Logs the code and the result to a file."""
-    now = datetime.datetime.now()
-    date_str = now.strftime('%Y-%m-%d')
-    time_str = now.strftime('%H:%M:%S')
-    log_file = os.path.join(LOG_DIR, f"log_{date_str}.txt")
-
-    try:
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"[{time_str}] Interaction\n")
-            f.write("-" * 20 + " REQUEST (PYTHON) " + "-" * 20 + "\n")
-            f.write(code + "\n")
-            f.write("-" * 20 + " RESPONSE " + "-" * 20 + "\n")
-
-            status = result.get("status", "unknown")
-            f.write(f"Status: {status}\n")
-
-            if status == "error":
-                f.write(f"Message: {result.get('message', '')}\n")
-            else:
-                # Output might be large, maybe truncate if needed, but for now full log is safer for debugging
-                f.write(f"Output: {result.get('output', '')}\n")
-
-            f.write("=" * 50 + "\n\n")
-    except Exception as e:
-        print(f"Failed to write log: {e}")
-
-
-def log_user_prompt(prompt: str):
-    """Logs the user prompt to a file."""
-    now = datetime.datetime.now()
-    date_str = now.strftime('%Y-%m-%d')
-    time_str = now.strftime('%H:%M:%S')
-    log_file = os.path.join(LOG_DIR, f"log_{date_str}.txt")
-
-    try:
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"[{time_str}] USER PROMPT\n")
-            f.write("-" * 20 + " PROMPT " + "-" * 20 + "\n")
-            f.write(prompt + "\n")
-            f.write("=" * 50 + "\n\n")
-    except Exception as e:
-        print(f"Failed to write log: {e}")
-
+ensure_log_dir()
 
 st.set_page_config(page_title="Blender Gemini Agent", layout="wide")
 st.sidebar.title("⚙️ Configuration")
 api_key = st.sidebar.text_input("Google API Key", type="password")
-server_url = st.sidebar.text_input("Blender Server URL", value="http://127.0.0.1:8081")
+server_url = st.sidebar.text_input("Blender Server URL", value=DEFAULT_SERVER_URL)
 model_name = st.sidebar.selectbox("Model Name", ["gemini-2.5-flash", "gemini-3-pro-preview", ])
 max_turns = st.sidebar.slider("Max Retry Turns", min_value=1, max_value=10, value=5)
 
@@ -72,66 +24,19 @@ def run_blender_script(code: str):
     """
     clean_code = code.replace("```python", "").replace("```", "").strip()
 
-    try:
-        response = requests.post(f"{server_url}/run", json={"code": clean_code})
-        if response.status_code == 200:
-            return response.json()  # Expecting {"status": "success", "output": ...}
-        elif response.status_code == 504:
-            return {"status": "error", "message": "Timeout: Blender took too long to execute."}
-        else:
-            return {"status": "error", "message": f"HTTP {response.status_code}: {response.text}"}
-    except requests.exceptions.ConnectionError:
-        return {"status": "error", "message": "Connection refused. Is the Blender server running?"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    # Create client using the current server_url from sidebar
+    client = BlenderClient(server_url)
+    return client.execute_script(clean_code)
 
 
 def get_viewport_screenshot():
     """
     Requests a rendered screenshot from the Blender server.
     """
-    try:
-        response = requests.post(f"{server_url}/view", json={})
-        if response.status_code == 200:
-            return response.json()  # Expecting {"status": "success", "image_base64": ...}
-        elif response.status_code == 504:
-            return {"status": "error", "message": "Timeout: Rendering took too long."}
-        else:
-            return {"status": "error", "message": f"HTTP {response.status_code}: {response.text}"}
-    except requests.exceptions.ConnectionError:
-        return {"status": "error", "message": "Connection refused. Is the Blender server running?"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    # Create client using the current server_url from sidebar
+    client = BlenderClient(server_url)
+    return client.get_screenshot()
 
-
-SYSTEM_INSTRUCTION = """
-You are an expert Blender Python scripter agent.
-Your goal is to autonomously modify the Blender scene to meet the user's requirements.
-
-### CRITICAL RULES:
-1. **Blender 4.2+ / 5.0 Compatibility (IMPORTANT)**:
-   - You are running on a modern Blender version where **Eevee settings have changed**.
-   - **FORBIDDEN ATTRIBUTES**: Do NOT attempt to set the following deprecated attributes. They will cause errors:
-     - `scene.eevee.use_ssr` (Screen Space Reflections)
-     - `scene.eevee.use_gtao` (Ambient Occlusion)
-     - `scene.eevee.use_bloom`
-     - `material.use_screen_space_refraction`
-   - **Raytracing**: Modern Eevee uses Raytracing automatically. You do not need to enable SSR or Refraction manually.
-
-2. **Error Handling Strategy**:
-   - **AttributeError / TypeError**: If you encounter an error like `'X' object has no attribute 'Y'`, it means the API has changed. **DO NOT** try to guess a new name. **REMOVE** that line of code entirely and retry.
-   - **Context Safety**: If you encounter a "Poll failed" error with `bpy.ops`, use `bpy.data` manipulations or the provided `get_view3d_context()` helper.
-
-3. **Visualization**: When `get_viewport_screenshot` is called, YOU MUST ENSURE:
-   - A **Camera** exists and is active (`bpy.context.scene.camera`).
-   - **Lights** are placed so objects are visible.
-
-### PROCESS:
-1. **Plan**: Decide what to do, keeping modern API limits in mind.
-2. **Act**: Execute code via `run_blender_script`.
-3. **Observe**: Check the stdout/stderr logs. If an `AttributeError` occurred, **delete the causing line** in the next turn.
-4. **Refine**: Check the image via `get_viewport_screenshot` and iterate until satisfied.
-"""
 
 tools = [run_blender_script, get_viewport_screenshot]
 
