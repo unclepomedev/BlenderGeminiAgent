@@ -11,7 +11,7 @@ st.set_page_config(page_title="Blender Gemini Agent", layout="wide")
 st.sidebar.title("⚙️ Configuration")
 api_key = st.sidebar.text_input("Google API Key", type="password")
 server_url = st.sidebar.text_input("Blender Server URL", value=DEFAULT_SERVER_URL)
-model_name = st.sidebar.selectbox("Model Name", ["gemini-2.5-flash", "gemini-3-pro-preview", ])
+model_name = st.sidebar.selectbox("Model Name", ["gemini-3-pro-preview", "gemini-2.5-flash", ])
 max_turns = st.sidebar.slider("Max Retry Turns", min_value=1, max_value=10, value=5)
 
 agent = GeminiAgent(server_url)
