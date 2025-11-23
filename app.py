@@ -1,10 +1,62 @@
 import base64
 import io
+import datetime
+import os
 
 import google.generativeai as genai
 import requests
 import streamlit as st
 from PIL import Image
+
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+
+def log_blender_interaction(code: str, result: dict):
+    """Logs the code and the result to a file."""
+    now = datetime.datetime.now()
+    date_str = now.strftime('%Y-%m-%d')
+    time_str = now.strftime('%H:%M:%S')
+    log_file = os.path.join(LOG_DIR, f"log_{date_str}.txt")
+
+    try:
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"[{time_str}] Interaction\n")
+            f.write("-" * 20 + " REQUEST (PYTHON) " + "-" * 20 + "\n")
+            f.write(code + "\n")
+            f.write("-" * 20 + " RESPONSE " + "-" * 20 + "\n")
+
+            status = result.get("status", "unknown")
+            f.write(f"Status: {status}\n")
+
+            if status == "error":
+                f.write(f"Message: {result.get('message', '')}\n")
+            else:
+                # Output might be large, maybe truncate if needed, but for now full log is safer for debugging
+                f.write(f"Output: {result.get('output', '')}\n")
+
+            f.write("=" * 50 + "\n\n")
+    except Exception as e:
+        print(f"Failed to write log: {e}")
+
+
+def log_user_prompt(prompt: str):
+    """Logs the user prompt to a file."""
+    now = datetime.datetime.now()
+    date_str = now.strftime('%Y-%m-%d')
+    time_str = now.strftime('%H:%M:%S')
+    log_file = os.path.join(LOG_DIR, f"log_{date_str}.txt")
+
+    try:
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"[{time_str}] USER PROMPT\n")
+            f.write("-" * 20 + " PROMPT " + "-" * 20 + "\n")
+            f.write(prompt + "\n")
+            f.write("=" * 50 + "\n\n")
+    except Exception as e:
+        print(f"Failed to write log: {e}")
+
 
 st.set_page_config(page_title="Blender Gemini Agent", layout="wide")
 st.sidebar.title("⚙️ Configuration")
@@ -126,6 +178,9 @@ def handle_run_blender_script(fname: str, fargs: dict, *, chat_session):
         st.code(code_to_run, language="python")
 
     result = run_blender_script(code_to_run)
+
+    log_blender_interaction(code_to_run, result)
+
     api_response = {"result": result}
 
     if result.get("status") == "error":
@@ -259,6 +314,8 @@ if prompt := st.chat_input("Ex: 'Clear the scene and create a red chair'"):
     if not st.session_state.chat_session:
         st.error("Model is not initialized.")
         st.stop()
+
+    log_user_prompt(prompt)
 
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
