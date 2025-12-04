@@ -14,7 +14,10 @@ standard.
 project_root/
 ├── BlenderGeminiAgent/        # [Server] Blender Extension (Add-on)
 │   ├── blender_manifest.toml  # Extension definition
-│   └── __init__.py            # Server logic (HTTP Server + Context Overrides)
+│   ├── __init__.py            # Package initialization
+│   ├── engine.py              # Core logic
+│   ├── operators.py           # Blender operators
+│   └── server.py              # HTTP Server
 │
 └── app.py                     # [Client] Streamlit Web UI (The Brain)
 ```
@@ -43,11 +46,24 @@ Prerequisites:
 
 Installation:
 
-1. Navigate to the BlenderGeminiAgent folder.
-2. Select both blender_manifest.toml and __init__.py, and compress them into a ZIP file (e.g., BlenderGeminiAgent.zip).
+**Option 1: Build Script (Recommended)**
+
+1. Run the build script:
+   ```bash
+   python tools/build_addon_zip.py
+   ```
+2. A zip file `BlenderGeminiAgent-x.x.x.zip` will be created in the `dist/` folder.
 3. Open Blender. Go to Edit > Preferences > Get Extensions.
 4. Click the arrow icon in the top-right corner and select "Install from Disk...".
-5. Select your BlenderGeminiAgent.zip.
+5. Select the zip file from the `dist/` folder.
+
+**Option 2: Manual Zip**
+
+1. Navigate to the BlenderGeminiAgent folder.
+2. Select **ALL** files in this folder (`blender_manifest.toml`, `__init__.py`, `engine.py`, `operators.py`, `server.py`), and compress them into a ZIP file (e.g., `BlenderGeminiAgent.zip`).
+3. Open Blender. Go to Edit > Preferences > Get Extensions.
+4. Click the arrow icon in the top-right corner and select "Install from Disk...".
+5. Select your `BlenderGeminiAgent.zip`.
 
 Starting the Server:
 
