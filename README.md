@@ -1,3 +1,5 @@
+# By the way, the reason I deviated from Blender's standard naming conventions is to allow for easy removal without conflicts if a better tool becomes available.
+
 # BlenderGeminiAgent
 
 BlenderGeminiAgent is an autonomous AI agent that controls Blender using natural language.
